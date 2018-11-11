@@ -1,0 +1,41 @@
+一.快速初始化mysql服务器（无密码）
+    mysqld --verbose --help | grep initialize
+    mysqld --initialize-insecure --user=mysql
+二.快速配置一主多从mysql集群
+    1.配置一主一从，从服务器/var/lib/mysql/下只存储数据.无binlog及relaylog和sock文件
+      具体配置： #cat /etc/my.cnf
+[mysql]
+socket=/var/log/mysql_log/mysql.sock
+[mysqld]
+bind-address  = 0.0.0.0
+server-id     = 13
+log_bin       = /var/log/mysql_log/mysql-bin
+binlog-format = mixed
+relay-log     = /var/log/mysql_log/relay-log
+relay-log-index  = /var/log/mysql_log/relay-log.index
+relay-log-info-file  = /var/log/mysql_log/relay-log.info //此处将日志文件移到了新创建的/var/log/mysql_log文件夹下
+    2.模板从服务器停止slave IO线程,回写内存数据到硬盘
+      mysql> stop slave;
+      mysql> flush tables;
+    3.将要配置的从服务器 从 模板从服务器同步数据
+      #rsync -aSH 模板从IP:/var/lib/mysql /var/lib/
+    4.删除包含serer_id的文件 auto.cnf
+      #rm -rf /var/lib/mysql/auto.cnf
+      创建日志文件夹 /var/log/mysql_log         //mysql配置文件与模板机一致，只需修改server id
+    5.启动服务,并恢复模板服务器IO线程
+    //需要增加从服务器或需要恢复宕机从服务器时，重复 2 -> 3 -> 4 ->5 步骤即可
+三 注意事项
+   1.主库与备用主库服务器上
+     #cat /etc/my.cnf
+      relay_log_purge = 0 
+   2.mha manager 服务器配置指定主库与备用主库binlog文件地址
+     #cat /etc/mha.cnf
+[server14]
+candidate_master=1
+hostname=192.168.1.14
+master_binlog_dir=/var/log/mysql_log
+
+[server15]
+candidate_master=1
+hostname=192.168.1.15
+master_binlog_dir=/var/log/mysql_log
