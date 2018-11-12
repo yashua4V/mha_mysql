@@ -39,3 +39,7 @@ master_binlog_dir=/var/log/mysql_log
 candidate_master=1
 hostname=192.168.1.15
 master_binlog_dir=/var/log/mysql_log
+
+
+四 常用命令
+   1. mysql>show processlist 查看当前从库
